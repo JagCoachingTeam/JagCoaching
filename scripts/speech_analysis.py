@@ -7,6 +7,8 @@ from scipy.signal import find_peaks
 from time import time
 # Must install torch torchaudio transformers librosa numpy scipy keybert
 
+device = "cuda:0" if torch.cuda.is_available() else "cpu" # USE GPU IF AVAILABLE
+
 def transcribe_speech(audio_path):
     """ Convert speech to text using Whisper """
     processor = WhisperProcessor.from_pretrained("openai/whisper-large-v2")
@@ -94,18 +96,24 @@ def generate_feedback(transcript, sentiment, filler_words, emotion, keywords, pa
     feedback += f"\nPronunciation Clarity: {clarity}%"
     return feedback
 
-# Example Usage
-audio_file = "scripts\\tests\\Student_1.wav"  # Path to speech file
-transcript = transcribe_speech(audio_file)
-sentiment = analyze_sentiment(transcript)
-filler_words = detect_filler_words(transcript)
-emotion = analyze_emotion(audio_file)
-keywords = extract_keywords(transcript)
-pauses = detect_pauses(audio_file)
-wpm = analyze_speech_rate(transcript, audio_file)
-corrected_text = grammar_correction(transcript)
-monotone = analyze_monotone_speech(audio_file)
-clarity = evaluate_pronunciation_clarity(audio_file)
+def main():
+    # Example Usage 
+    audio_file = "scripts\\tests\\Student_1.wav"  # Path to speech file
+    transcript = transcribe_speech(audio_file)
+    sentiment = analyze_sentiment(transcript)
+    filler_words = detect_filler_words(transcript)
+    emotion = analyze_emotion(audio_file)
+    keywords = extract_keywords(transcript)
+    pauses = detect_pauses(audio_file)
+    wpm = analyze_speech_rate(transcript, audio_file)
+    corrected_text = grammar_correction(transcript)
+    monotone = analyze_monotone_speech(audio_file)
+    clarity = evaluate_pronunciation_clarity(audio_file)
 
-feedback_report = generate_feedback(transcript, sentiment, filler_words, emotion, keywords, pauses, wpm, corrected_text, monotone, clarity)
-print(feedback_report)
+    feedback_report = generate_feedback(transcript, sentiment, filler_words, emotion, keywords, pauses, wpm, corrected_text, monotone, clarity)
+    print(feedback_report)
+
+if __name__ == "__main__":
+    start_time = time()
+    main()
+    print(f"Execution time: {time() - start_time:.2f} seconds")

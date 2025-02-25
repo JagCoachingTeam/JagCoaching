@@ -1,1 +1,4 @@
-/scripts/tests/
+/scripts/tests/*.wav
+/scripts/tests/*.mp4
+**/__pycache__/
+.vscode/
