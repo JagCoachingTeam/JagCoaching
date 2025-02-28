@@ -1,6 +1,8 @@
 import speech_analysis
 import json
 
+# -- TODO: Add Unique ID potentially to the class to identify each instance per user --
+
 # -- Creating a class that will take in an audio file and return a structured feedback report --
 class SpeechAnalysisObject:
     """_summary_: Speech Analysis that takes in an audio file and returns a structured feedback report
@@ -19,9 +21,18 @@ class SpeechAnalysisObject:
         self.clarity = speech_analysis.evaluate_pronunciation_clarity(audio_path)
     
     def generate_feedback(self):
-        """ Generate structured feedback """
+        """ Generate structured feedback(truncated feedback) """
         feedback = speech_analysis.generate_feedback(self.transcript, self.sentiment, self.filler_words, self.emotion, self.keywords, self.pauses, self.wpm, self.corrected_text, self.monotone, self.clarity) 
         return feedback
+    
+    def generate_smart_report(self):
+        """_summary_: Generate a smart feedback report using Google GenAI
+
+        Returns:
+            _type_: JSON response from Google GenAI API
+        """
+        smart_report = speech_analysis.generate_smart_report(self.transcript, self.sentiment, self.filler_words, self.emotion, self.keywords, self.pauses, self.wpm, self.corrected_text, self.monotone, self.clarity)
+        return smart_report
     
     def to_dict(self):
         """ Convert instance properties to a dictionary """
@@ -40,7 +51,7 @@ class SpeechAnalysisObject:
 # -- Example Usage --
 def main():
     # Example Usage
-    audio_file = "scripts\\tests\\Student_1.wav"  # Path to speech file
+    audio_file = "scripts\\tests\\Student_2.wav"  # Path to speech file
     analysis = SpeechAnalysisObject(audio_file)
     feedback_report = analysis.generate_feedback()
     print(feedback_report)

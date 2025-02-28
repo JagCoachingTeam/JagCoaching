@@ -5,13 +5,21 @@ from transformers import pipeline, WhisperProcessor, WhisperForConditionalGenera
 from keybert import KeyBERT
 from scipy.signal import find_peaks
 from time import time
-# Must install torch torchaudio transformers librosa numpy scipy keybert
+from google import genai
+from google.genai import types
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+# Must install torch torchaudio transformers librosa numpy scipy keybert google-genai python-dotenv
+
+# TODO: Add error handling, logging, and unit tests
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu" # USE GPU IF AVAILABLE
 
 def transcribe_speech(audio_path):
     """ Convert speech to text using Whisper """
-    processor = WhisperProcessor.from_pretrained("openai/whisper-large-v2")
+    processor = WhisperProcessor.from_pretrained("openai/whisper-large-v2", language="en")
     model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large-v2")
     
     audio, sr = librosa.load(audio_path, sr=16000)
@@ -96,6 +104,38 @@ def generate_feedback(transcript, sentiment, filler_words, emotion, keywords, pa
     feedback += f"\nPronunciation Clarity: {clarity}%"
     return feedback
 
+
+def generate_smart_report(transcript, sentiment, filler_words, emotion, keywords, pauses, wpm, corrected_text, monotone, clarity):
+    """ Generate a smart feedback report using Google GenAI """
+    prompt = f"""
+    1. Transcription: {transcript}
+    2. Sentiment: {sentiment}
+    3. Filler Words: {filler_words}
+    4. Emotions: {emotion}
+    5. Key Topics: {keywords}
+    6. Significant Pauses: {pauses}
+    7. Speech Rate: {wpm} words per minute
+    8. Grammar Corrections: {corrected_text}
+    9. Speech Tone: {monotone}
+    10. Pronunciation Clarity: {clarity}%
+    
+    Provide actionable insights and suggestions for improvement.
+    """
+    google_gemini_api_key = os.environ.get("GOOGLE_GEMINI_API_KEY")
+    client = genai.Client(api_key= google_gemini_api_key)
+    
+    response = client.models.generate_content(
+        model="gemini-2.0-flash-001",
+        contents= [prompt],
+        config= types.GenerateContentConfig(
+            system_instruction="You are an expert speech coach. Provide a detailed feedback report based on the following analysis",
+            response_mime_type="application/json",
+            stop_sequences=["\n\n"],)
+        
+    )
+    print(response)
+    return response.text
+
 def main():
     # Example Usage 
     audio_file = "scripts\\tests\\Student_1.wav"  # Path to speech file
@@ -110,8 +150,11 @@ def main():
     monotone = analyze_monotone_speech(audio_file)
     clarity = evaluate_pronunciation_clarity(audio_file)
 
-    feedback_report = generate_feedback(transcript, sentiment, filler_words, emotion, keywords, pauses, wpm, corrected_text, monotone, clarity)
-    print(feedback_report)
+    # feedback_report = generate_feedback(transcript, sentiment, filler_words, emotion, keywords, pauses, wpm, corrected_text, monotone, clarity)
+    # print(feedback_report)
+    
+    smart_report = generate_smart_report(transcript, sentiment, filler_words, emotion, keywords, pauses, wpm, corrected_text, monotone, clarity)
+    print(smart_report)
 
 if __name__ == "__main__":
     start_time = time()

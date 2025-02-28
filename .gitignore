@@ -2,3 +2,4 @@
 /scripts/tests/*.mp4
 **/__pycache__/
 .vscode/
+.env
