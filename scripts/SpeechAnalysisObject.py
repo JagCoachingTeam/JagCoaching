@@ -1,14 +1,24 @@
 import speech_analysis
 import json
+import uuid
+from datetime import datetime
 
-# -- TODO: Add Unique ID potentially to the class to identify each instance per user --
+# -- Speech Analysis Object --
+# This class is a wrapper around the speech analysis functions in the speech_analysis.py file.
 
 # -- Creating a class that will take in an audio file and return a structured feedback report --
 class SpeechAnalysisObject:
     """_summary_: Speech Analysis that takes in an audio file and returns a structured feedback report
     """
-    def __init__(self, audio_path):
+    def __init__(self, audio_path, user_id=None):
+        # Core Properties
         self.audio_path = audio_path
+        self.user_id = user_id if user_id else str(uuid.uuid4())
+        self.analysis_id = str(uuid.uuid4())
+        self.timestamp = datetime.now().isoformat()
+        
+        
+        # Analysis Properties
         self.transcript = speech_analysis.transcribe_speech(audio_path)
         self.sentiment = speech_analysis.analyze_sentiment(self.transcript)
         self.filler_words = speech_analysis.detect_filler_words(self.transcript)
