@@ -19,6 +19,7 @@ from dependencies.auth import (
 )
 from database.cloud_db_controller import CloudDBController
 from dotenv import load_dotenv
+import jwt
 
 load_dotenv("./.env.development")
 
@@ -131,8 +132,14 @@ async def refresh_token(request: RefreshRequest = Body(...)):
             DB_CONNECTION.client.close()
 
 
-# TODO: Make Logout Function 
+# Updated by Angelo April 2 // Phase 2: Logout now revokes access token
 @router.post("/api/logout/")
-async def logout(current_user: UserInDB = Depends(get_current_user)):
-    print(current_user)
-    return {"status": "success", "message": "Logout successful!"}
+async def logout(current_user: UserInDB = Depends(get_current_user), token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        exp = payload.get("exp")
+        expires_at = datetime.fromtimestamp(exp)
+        DB_CONNECTION.revoke_token("JagCoaching", token=token, expires_at=expires_at, reason="user_logout")
+        return {"status": "success", "message": "Logout successful!"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Logout failed: {str(e)}")
