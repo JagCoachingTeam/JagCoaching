@@ -49,7 +49,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-# Angelo Updated April 1: Refresh Token Helpers
+# Angelo Updated April 1 // Phase 1: Refresh Token Helpers
 def create_refresh_token():
     return secrets.token_urlsafe(32)
 
@@ -77,6 +77,10 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
+        # Angelo Updated April 1 //  Phase 2: Check for revoked token
+        if DB_CONNECTION.is_token_revoked("JagCoaching", token):
+            raise HTTPException(status_code=401, detail="Token has been revoked")
+
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         print(payload)
         username: str = payload.get("sub")
