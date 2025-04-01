@@ -11,29 +11,26 @@ from passlib.context import CryptContext
 from dotenv import load_dotenv
 from database.cloud_db_controller import CloudDBController
 from models.user_models import TokenData, UserLogin, UserResponse, User
-
-
+from config import settings
+import secrets
+import hashlib
 
 # Load environment variables
 load_dotenv("./.env.development")
 
 # Configuration
-SECRET_KEY = os.getenv("SECRET_KEY","8aff34e1-d330-4eb8-b4be-5d35f5885451")
-ALGORITHM = os.getenv("ALGORITHM","HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES","30"))
-
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_DAYS
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/token",auto_error=False)
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/token", auto_error=False)
 
 router = APIRouter()
-
 DB_CONNECTION = CloudDBController()
 
-
-
-
+# Angelo Updated April 1: Utility Functions
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         return pwd_context.verify(plain_password, hashed_password)
@@ -45,18 +42,30 @@ def get_password_hash(password):
     """ Hash the given password."""
     return pwd_context.hash(password)
 
-
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """ Create an access token with the given data and expiration time."""
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
+# Angelo Updated April 1: Refresh Token Helpers
+def create_refresh_token():
+    return secrets.token_urlsafe(32)
+
+def hash_refresh_token(token: str):
+    return hashlib.sha256(token.encode()).hexdigest()
+
+def save_refresh_token_to_db(user_id: str, refresh_token: str, device_info: Optional[dict] = None):
+    token_hash = hash_refresh_token(refresh_token)
+    expires_at = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    DB_CONNECTION.save_refresh_token("JagCoaching", {
+        "user_id": user_id,
+        "token_hash": token_hash,
+        "expires_at": expires_at,
+        "device_info": device_info,
+        "created_at": datetime.utcnow()
+    })
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
     """ Get the current user from the given token."""
@@ -79,16 +88,13 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         print("jwt error")
         raise credentials_exception from exc
     user = get_user(db=DB_CONNECTION, username=token_data.username)
-
     return user
-
 
 def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
     """ Get the current active user."""
     if current_user is None:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
-
 
 def get_user(db: CloudDBController, username: str):
     """ Get the user from the database."""
@@ -107,13 +113,13 @@ def authenticate_user(db: CloudDBController, email: str, password: str):
         if not user:
             print(f"User not found: {email}")
             return False
-            
+
         print(f"Found user document: {user}")
-        
+
         if not verify_password(password, user.get('password', '')):
             print("Password verification failed")
             return False
-            
+
         return user
     except Exception as e:
         print(f"Authentication error: {str(e)}")
