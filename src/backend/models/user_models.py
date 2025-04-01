@@ -1,10 +1,11 @@
+# Updated on April 1 line 97 for token management
+
 from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List, Dict
 from bson import ObjectId
 
 # -- INFO: Models for user authentication and management -- #
-
 
 # Define PyObjectId for MongoDB ObjectId handling
 class PyObjectId(ObjectId):
@@ -23,8 +24,6 @@ class PyObjectId(ObjectId):
         return {"type": "string"}
 
 # Define base model for common attributes
-
-
 class User(BaseModel):
     """Base user model with common attributes"""
     id: Optional[PyObjectId] = Field(default=None, alias="_id")
@@ -39,12 +38,9 @@ class User(BaseModel):
         arbitrary_types_allowed = True
         json_encoders = {ObjectId: str}
 
-
 class UserCreate(User):
     """Model for user creation requests"""
-
     password: str = Field(..., min_length=8)
-
 
 class UserLogin(BaseModel):
     """Model for user login credentials"""
@@ -59,7 +55,6 @@ class UserLogin(BaseModel):
             }
         }
 
-
 class UserInDB(User):
     """Model for user in database"""
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
@@ -73,7 +68,6 @@ class UserInDB(User):
         arbitrary_types_allowed = True
         json_encoders = {ObjectId: str}
 
-
 class UserResponse(User):
     """Model for user responses (no password)"""
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
@@ -82,7 +76,6 @@ class UserResponse(User):
         populate_by_name = True
         arbitrary_types_allowed = True
         json_encoders = {ObjectId: str}
-
 
 class UserUpdate(BaseModel):
     """Model for user update requests"""
@@ -95,16 +88,29 @@ class UserUpdate(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-
 # Define token models for authentication
 class Token(BaseModel):
     access_token: str
     token_type: str
 
-
 class TokenData(BaseModel):
     username: str | None = None
 
+# Refresh Token Model
+class RefreshToken(BaseModel):
+    token_hash: str
+    user_id: str
+    expires_at: datetime
+    device_info: Optional[dict] = None
+
+# Session Model 
+class Session(BaseModel):
+    session_id: str
+    user_id: str
+    ip_address: Optional[str]
+    device_info: Optional[dict] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    last_active: datetime = Field(default_factory=datetime.utcnow)
 
 # Test user data for account page
 test_user = {
