@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 load_dotenv("./.env.development")
 
 
-
 class CloudDBController:
     """Class to handle MongoDB operations"""
 
@@ -72,6 +71,19 @@ class CloudDBController:
     def count_documents(self, db_name, collection_name, filter_dict=None):
         """Count documents matching the filter criteria"""
         return self.client[db_name][collection_name].count_documents(filter_dict or {})
+
+    # April 1: Refresh Token Handling Methods
+    def save_refresh_token(self, db_name, token_data):
+        return self.client[db_name]["refresh_tokens"].insert_one(token_data)
+
+    def get_refresh_token(self, db_name, token_hash):
+        return self.client[db_name]["refresh_tokens"].find_one({"token_hash": token_hash})
+
+    def delete_refresh_token(self, db_name, token_hash):
+        return self.client[db_name]["refresh_tokens"].delete_one({"token_hash": token_hash})
+
+    def delete_all_refresh_tokens_for_user(self, db_name, user_id):
+        return self.client[db_name]["refresh_tokens"].delete_many({"user_id": user_id})
 
 
 class CloudDBInitializer(CloudDBController):
