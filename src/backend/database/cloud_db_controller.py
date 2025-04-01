@@ -72,7 +72,7 @@ class CloudDBController:
         """Count documents matching the filter criteria"""
         return self.client[db_name][collection_name].count_documents(filter_dict or {})
 
-    # April 1: Refresh Token Handling Methods
+    # April 1 // Phase 1: Refresh Token Handling Methods
     def save_refresh_token(self, db_name, token_data):
         return self.client[db_name]["refresh_tokens"].insert_one(token_data)
 
@@ -84,6 +84,18 @@ class CloudDBController:
 
     def delete_all_refresh_tokens_for_user(self, db_name, user_id):
         return self.client[db_name]["refresh_tokens"].delete_many({"user_id": user_id})
+
+    # April 1 // Phase 2: Token Revocation Methods
+    def revoke_token(self, db_name, token, expires_at, reason=None):
+        return self.client[db_name]["revoked_tokens"].insert_one({
+            "token": token,
+            "expires_at": expires_at,
+            "reason": reason,
+            "revoked_at": datetime.utcnow()
+        })
+
+    def is_token_revoked(self, db_name, token):
+        return self.client[db_name]["revoked_tokens"].find_one({"token": token})
 
 
 class CloudDBInitializer(CloudDBController):
@@ -102,9 +114,8 @@ class CloudDBInitializer(CloudDBController):
 
         # Create indexes
         users_collection.create_index("email", unique=True)
-        # For faster queries on user's videos
         videos_collection.create_index("user_id")
-        videos_collection.create_index("upload_date")  # For sorting by date
+        videos_collection.create_index("upload_date")
 
         print("Collections and indexes created successfully!")
 
@@ -113,7 +124,6 @@ class CloudDBInitializer(CloudDBController):
     def add_sample_data(self):
         """Add some sample data to test the collections"""
 
-        # Add a sample user
         user = {
             "email": "user@example.com",
             "name": "Test User",
@@ -123,7 +133,6 @@ class CloudDBInitializer(CloudDBController):
         result = self.add_document("JagCoaching", "users", user)
         user_id = str(result.inserted_id)
 
-        # Add a sample video linked to the user
         video = {
             "title": "Sample Coaching Video",
             "description": "A test video for the coaching platform",
@@ -140,7 +149,6 @@ class CloudDBInitializer(CloudDBController):
 
 
 def main():
-
     db_initializer = CloudDBInitializer()
     # db_initializer.create_collections_and_indexes()
     # db_initializer.add_sample_data()
